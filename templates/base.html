@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Environmental & Disaster Management System{% endblock %}</title>
+    
+    <!-- Bootstrap CSS from Replit CDN -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Leaflet CSS for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    
+    {% block additional_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-leaf me-2"></i>EcoSafetyNet
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="fas fa-home me-1"></i>Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/weather"><i class="fas fa-cloud-sun me-1"></i>Weather</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/air-quality"><i class="fas fa-wind me-1"></i>Air Quality</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/water-quality"><i class="fas fa-water me-1"></i>Water Quality</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/deforestation"><i class="fas fa-tree me-1"></i>Deforestation</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/disaster-map">
+                            <i class="fas fa-map-marked-alt me-1"></i>Disaster Map
+                            <span id="disaster-counter" class="alert-counter" style="display: none;">0</span>
+                        </a>
+                    </li>
+                </ul>
+                <div class="d-flex ms-auto">
+                    <a href="/sos" class="btn btn-danger me-2">
+                        <i class="fas fa-exclamation-triangle me-1"></i>SOS
+                    </a>
+                    <form id="city-search-form" class="d-flex" method="get">
+                        <input id="city-input" class="form-control me-2" type="search" placeholder="Enter city" aria-label="Search" name="city" value="{{ request.args.get('city', '') }}">
+                        <button class="btn btn-outline-light" type="submit">Search</button>
+                        <button id="fetch-location" class="btn btn-outline-info ms-1" type="button" title="Use my location">
+                            <i class="fas fa-location-arrow"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Alerts Container -->
+    <div id="alerts-container" class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Main Content Container -->
+    <div class="container-fluid mt-3">
+        <div class="row">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5>EcoSafetyNet</h5>
+                    <p>Environmental monitoring and disaster management system for a safer world.</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="/weather" class="text-light">Weather</a></li>
+                        <li><a href="/air-quality" class="text-light">Air Quality</a></li>
+                        <li><a href="/water-quality" class="text-light">Water Quality</a></li>
+                        <li><a href="/deforestation" class="text-light">Deforestation</a></li>
+                        <li><a href="/disaster-map" class="text-light">Disaster Map</a></li>
+                        <li><a href="/sos" class="text-light">Emergency SOS</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>Emergency Contacts</h5>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-phone-alt me-2"></i>Emergency: <strong>911</strong></li>
+                        <li><i class="fas fa-ambulance me-2"></i>Ambulance: <strong>102</strong></li>
+                        <li><i class="fas fa-fire-extinguisher me-2"></i>Fire: <strong>101</strong></li>
+                        <li><i class="fas fa-shield-alt me-2"></i>Police: <strong>100</strong></li>
+                        <li><i class="fas fa-life-ring me-2"></i>Disaster Management: <strong>108</strong></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-3">
+            <div class="text-center">
+                <p class="mb-0">&copy; 2025 Symbiotics | Last Updated: {{ last_updated if last_updated else now }}</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Hidden inputs to store location data for JS -->
+    {% if lat and lon %}
+    <input type="hidden" id="lat" value="{{ lat }}">
+    <input type="hidden" id="lon" value="{{ lon }}">
+    {% endif %}
+    
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Leaflet.js -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/alerts.js') }}"></script>
+    
+    {% block additional_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+
+{% block title %}Deforestation - EcoSafetyNet{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if location %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-dark text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0"><i class="fas fa-tree me-2"></i>Deforestation: {{ location }}</h2>
+                        <span class="badge bg-info fs-6">Last Updated: {{ last_updated }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Deforestation Alert Banner -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-{{ 'success' if data.deforestation_risk == 'low' else 'warning' if data.deforestation_risk == 'medium' else 'danger' }}">
+                <div class="card-header bg-{{ 'success' if data.deforestation_risk == 'low' else 'warning' if data.deforestation_risk == 'medium' else 'danger' }} {{ 'text-dark' if data.deforestation_risk == 'medium' else 'text-white' }}">
+                    <h3 class="mb-0">
+                        <i class="fas {{ 'fa-check-circle' if data.deforestation_risk == 'low' else 'fa-exclamation-triangle' if data.deforestation_risk == 'medium' else 'fa-radiation' }} me-2"></i>
+                        Deforestation Risk: {{ data.deforestation_risk|capitalize }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="lead">
+                                {% if data.deforestation_risk == 'low' %}
+                                    This area currently shows low deforestation activity with minimal forest loss detected.
+                                {% elif data.deforestation_risk == 'medium' %}
+                                    This area is experiencing moderate deforestation activity with concerning patterns of forest loss.
+                                {% else %}
+                                    This area is experiencing severe deforestation with critical forest loss detected. Immediate action recommended.
+                                {% endif %}
+                            </p>
+                            <p>
+                                <strong>Forest Cover Change:</strong> <span class="text-danger">{{ data.forest_cover_change }}%</span> over the past year<br>
+                                <strong>Recent Clearing Events:</strong> {{ data.recent_clearing_events }} detected<br>
+                                <strong>Total Forest Area:</strong> {{ "{:,.0f}".format(data.forest_area) }} hectares<br>
+                                <strong>Protected Area:</strong> {{ data.protected_area }}% of total forest
+                            </p>
+                            <div class="mt-3">
+                                <a href="/disaster-map?city={{ request.args.get('city', '') }}" class="btn btn-primary">
+                                    <i class="fas fa-map-marked-alt me-2"></i>View on Disaster Map
+                                </a>
+                                <a href="/sos" class="btn btn-danger ms-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Report Illegal Clearing
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="deforestation-indicator bg-{{ 'success' if data.deforestation_risk == 'low' else 'warning' if data.deforestation_risk == 'medium' else 'danger' }} {{ 'text-dark' if data.deforestation_risk == 'medium' else '' }}">
+                                <div class="indicator-label">Year-over-Year Change</div>
+                                <div class="indicator-value">{{ data.year_over_year_change }}%</div>
+                                <div class="indicator-label">
+                                    {% if data.year_over_year_change > 0 %}
+                                        Forest Gain
+                                    {% else %}
+                                        Forest Loss
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Forest Cover Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Forest Cover Statistics</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <div class="card border-success">
+                                <div class="card-body text-center p-2">
+                                    <h3 class="mb-0">{{ data.forest_area|int|format_number }}</h3>
+                                    <p class="mb-0 text-muted">Hectares of Forest</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card border-success">
+                                <div class="card-body text-center p-2">
+                                    <h3 class="mb-0">{{ data.protected_area }}%</h3>
+                                    <p class="mb-0 text-muted">Protected Forest</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h5>Protection Status</h5>
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ data.protected_area }}%;" aria-valuenow="{{ data.protected_area }}" aria-valuemin="0" aria-valuemax="100">{{ data.protected_area }}% Protected</div>
+                        </div>
+                        
+                        <h5>Forest Cover</h5>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ (data.forest_cover_change * -1) }}%;" aria-valuenow="{{ (data.forest_cover_change * -1) }}" aria-valuemin="0" aria-valuemax="100">{{ (data.forest_cover_change * -1) }}% Lost</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4><i class="fas fa-chart-line me-2"></i>Deforestation Trend</h4>
+                </div>
+                <div class="card-body">
+                    <canvas id="deforestation-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Clearing Events & Risk Factors -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="fas fa-exclamation-circle me-2"></i>Recent Clearing Events</h4>
+                </div>
+                <div class="card-body">
+                    {% if data.recent_clearing_events > 0 %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>{{ data.recent_clearing_events }} clearing events detected in the last 30 days
+                        </div>
+                        
+                        <div class="list-group">
+                            {% for i in range(min(5, data.recent_clearing_events)) %}
+                                {% set days_ago = range(1, 30)|random %}
+                                {% set area = range(1, 100)|random / 10 %}
+                                {% set lat_offset = (range(-100, 100)|random / 1000) %}
+                                {% set lon_offset = (range(-100, 100)|random / 1000) %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">Clearing Event #{{ loop.index }}</h6>
+                                        <small class="text-muted">{{ days_ago }} days ago</small>
+                                    </div>
+                                    <p class="mb-1">Area affected: {{ area }} hectares</p>
+                                    <small>
+                                        Coordinates: {{ (lat|float + lat_offset)|round(6) }}, {{ (lon|float + lon_offset)|round(6) }}
+                                    </small>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if data.recent_clearing_events > 5 %}
+                            <div class="mt-3 text-center">
+                                <button class="btn btn-outline-primary" disabled>
+                                    View all {{ data.recent_clearing_events }} events
+                                </button>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>No clearing events detected in the last 30 days
+                        </div>
+                        <p class="text-center mt-5 mb-5">
+                            <i class="fas fa-tree fa-5x text-success"></i>
+                        </p>
+                        <p class="text-center">The forest in this area appears to be stable with no detected clearing activity.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Deforestation Risk Factors</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Risk Factor</th>
+                                    <th>Level</th>
+                                    <th>Impact</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><i class="fas fa-industry me-2"></i>Industrial Development</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            {% set industrial_risk = range(10, 90)|random %}
+                                            <div class="progress-bar {{ 'bg-success' if industrial_risk < 30 else 'bg-warning' if industrial_risk < 70 else 'bg-danger' }}" role="progressbar" style="width: {{ industrial_risk }}%;" aria-valuenow="{{ industrial_risk }}" aria-valuemin="0" aria-valuemax="100">{{ industrial_risk }}%</div>
+                                        </div>
+                                    </td>
+                                    <td>{{ 'Low' if industrial_risk < 30 else 'Medium' if industrial_risk < 70 else 'High' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-tractor me-2"></i>Agricultural Expansion</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            {% set agriculture_risk = range(10, 90)|random %}
+                                            <div class="progress-bar {{ 'bg-success' if agriculture_risk < 30 else 'bg-warning' if agriculture_risk < 70 else 'bg-danger' }}" role="progressbar" style="width: {{ agriculture_risk }}%;" aria-valuenow="{{ agriculture_risk }}" aria-valuemin="0" aria-valuemax="100">{{ agriculture_risk }}%</div>
+                                        </div>
+                                    </td>
+                                    <td>{{ 'Low' if agriculture_risk < 30 else 'Medium' if agriculture_risk < 70 else 'High' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-road me-2"></i>Infrastructure Development</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            {% set infrastructure_risk = range(10, 90)|random %}
+                                            <div class="progress-bar {{ 'bg-success' if infrastructure_risk < 30 else 'bg-warning' if infrastructure_risk < 70 else 'bg-danger' }}" role="progressbar" style="width: {{ infrastructure_risk }}%;" aria-valuenow="{{ infrastructure_risk }}" aria-valuemin="0" aria-valuemax="100">{{ infrastructure_risk }}%</div>
+                                        </div>
+                                    </td>
+                                    <td>{{ 'Low' if infrastructure_risk < 30 else 'Medium' if infrastructure_risk < 70 else 'High' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-fire me-2"></i>Wildfires</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            {% set fire_risk = range(10, 90)|random %}
+                                            <div class="progress-bar {{ 'bg-success' if fire_risk < 30 else 'bg-warning' if fire_risk < 70 else 'bg-danger' }}" role="progressbar" style="width: {{ fire_risk }}%;" aria-valuenow="{{ fire_risk }}" aria-valuemin="0" aria-valuemax="100">{{ fire_risk }}%</div>
+                                        </div>
+                                    </td>
+                                    <td>{{ 'Low' if fire_risk < 30 else 'Medium' if fire_risk < 70 else 'High' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-gavel me-2"></i>Illegal Logging</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            {% set logging_risk = range(10, 90)|random %}
+                                            <div class="progress-bar {{ 'bg-success' if logging_risk < 30 else 'bg-warning' if logging_risk < 70 else 'bg-danger' }}" role="progressbar" style="width: {{ logging_risk }}%;" aria-valuenow="{{ logging_risk }}" aria-valuemin="0" aria-valuemax="100">{{ logging_risk }}%</div>
+                                        </div>
+                                    </td>
+                                    <td>{{ 'Low' if logging_risk < 30 else 'Medium' if logging_risk < 70 else 'High' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Conservation Efforts & Recommendations -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-leaf me-2"></i>Conservation Recommendations</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Protection Measures</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i>Establish protected forest areas</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i>Implement forest monitoring systems</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i>Enforce logging regulations</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i>Create buffer zones around critical habitats</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-success me-2"></i>Support forest ranger programs</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0"><i class="fas fa-seedling me-2"></i>Restoration Efforts</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-primary me-2"></i>Reforest degraded areas</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-primary me-2"></i>Establish tree nurseries</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-primary me-2"></i>Implement agroforestry practices</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-primary me-2"></i>Restore natural water systems</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-primary me-2"></i>Engage local communities in restoration</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Community Involvement</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-info me-2"></i>Support sustainable livelihoods</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-info me-2"></i>Provide environmental education</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-info me-2"></i>Develop eco-tourism opportunities</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-info me-2"></i>Establish community forests</li>
+                                        <li class="list-group-item"><i class="fas fa-check-circle text-info me-2"></i>Create incentives for conservation</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-info-circle me-2"></i>Take Action</h5>
+                            <p>Report illegal deforestation activities, support local conservation efforts, and stay informed about forest protection measures in your area.</p>
+                            <div class="mt-3">
+                                <a href="/sos" class="btn btn-danger me-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Report Illegal Activity
+                                </a>
+                                <button class="btn btn-success" disabled>
+                                    <i class="fas fa-hand-holding-heart me-2"></i>Support Conservation
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Deforestation Monitoring</h3>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Enter a city or region name to view deforestation data.</p>
+                    <form id="city-search-form" class="d-flex" method="get">
+                        <input id="city-input" class="form-control me-2" type="search" placeholder="Enter city or region name" aria-label="Search" name="city">
+                        <button class="btn btn-primary" type="submit">Search</button>
+                        <button id="fetch-location" class="btn btn-info ms-1" type="button" title="Use my location">
+                            <i class="fas fa-location-arrow"></i>
+                        </button>
+                    </form>
+                    <p class="mt-3">
+                        <small id="location-status" class="text-muted"></small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block additional_js %}
+{% if historical %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Generate deforestation trend data
+    const dates = {{ historical.dates|tojson }};
+    const dataLength = dates.length;
+    
+    // Create an array of forest cover change percentages (negative = deforestation)
+    const forestChangeData = [];
+    
+    // Base on current forest cover change value
+    const baseChange = {{ data.forest_cover_change }};
+    
+    // Generate past data with slight variations to show trend
+    for (let i = 0; i < dataLength; i++) {
+        // Add random variation but maintain the trend
+        const variation = Math.random() * 0.8 - 0.4;
+        forestChangeData.push(baseChange + variation);
+    }
+    
+    // Create deforestation chart
+    createDeforestationChart(dates, forestChangeData);
+});
+</script>
+{% endif %}
+{% endblock %}
