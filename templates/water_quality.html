@@ -1,152 +1,394 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
-{% block title %}Water Quality{% endblock %}
+{% block title %}Water Quality - EcoSafetyNet{% endblock %}
 
 {% block content %}
 <div class="container">
-    <!-- Search Form -->
+    {% if location %}
     <div class="row mb-4">
-        <div class="col-md-6 mx-auto">
-            <div class="card">
+        <div class="col-12">
+            <div class="card bg-dark text-white">
                 <div class="card-body">
-                    <form id="citySearchForm" method="GET" class="d-flex">
-                        <input type="text" name="city" class="form-control me-2" placeholder="Enter city name (e.g., Delhi, Mumbai)" required>
-                        <button type="submit" class="btn btn-primary">Search</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {% if data %}
-    <div class="row">
-        <!-- pH Level Card -->
-        <div class="col-md-4 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-vial"></i> pH Level</h5>
-                </div>
-                <div class="card-body">
-                    <div class="display-4 text-center mb-3">{{ "%.1f"|format(data.ph) }}</div>
-                    <div class="text-center">
-                        <span class="badge {% if 6.5 <= data.ph <= 8.5 %}bg-success{% else %}bg-danger{% endif %} p-2">
-                            {{ "Normal" if 6.5 <= data.ph <= 8.5 else "Abnormal" }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Turbidity Card -->
-        <div class="col-md-4 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-water"></i> Turbidity</h5>
-                </div>
-                <div class="card-body">
-                    <div class="display-4 text-center mb-3">{{ "%.1f"|format(data.turbidity) }} NTU</div>
-                    <div class="text-center">
-                        <span class="badge {% if data.turbidity <= 5 %}bg-success{% else %}bg-danger{% endif %} p-2">
-                            {{ "Acceptable" if data.turbidity <= 5 else "High" }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Dissolved Oxygen Card -->
-        <div class="col-md-4 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-wind"></i> Dissolved Oxygen</h5>
-                </div>
-                <div class="card-body">
-                    <div class="display-4 text-center mb-3">{{ "%.1f"|format(data.dissolved_oxygen) }} mg/L</div>
-                    <div class="text-center">
-                        <span class="badge {% if data.dissolved_oxygen >= 6 %}bg-success{% else %}bg-danger{% endif %} p-2">
-                            {{ "Good" if data.dissolved_oxygen >= 6 else "Low" }}
-                        </span>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0"><i class="fas fa-water me-2"></i>Water Quality: {{ location }}</h2>
+                        <span class="badge bg-info fs-6">Last Updated: {{ last_updated }}</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Safety Guidelines -->
-    <div class="row mt-4">
+    
+    <!-- Water Quality Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 {{ 'bg-success text-white' if data.ph >= 6.5 and data.ph <= 8.5 else 'bg-danger text-white' }}">
+                <div class="card-body text-center py-4">
+                    <h1 class="display-1 mb-0">{{ data.ph }}</h1>
+                    <p class="lead mb-0">pH Level</p>
+                    <h3 class="mb-3">
+                        {% if data.ph < 6.5 %}Acidic
+                        {% elif data.ph > 8.5 %}Alkaline
+                        {% else %}Normal
+                        {% endif %}
+                    </h3>
+                    
+                    <div class="mt-4">
+                        <p class="mb-0">
+                            <strong>Safe Range:</strong> 6.5 - 8.5
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="row text-center">
+                        <div class="col">
+                            <h5>Health Implications</h5>
+                            <p class="mb-0">
+                                {% if data.ph < 6.5 %}
+                                    Acidic water may leach metals from pipes and fixtures. Possible metallic taste.
+                                {% elif data.ph > 8.5 %}
+                                    Alkaline water can cause scale buildup and bitter taste. May irritate skin and eyes.
+                                {% else %}
+                                    Safe for consumption and daily use. Properly balanced pH level.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 {{ 'bg-success text-white' if data.turbidity < 1 else 'bg-warning text-dark' if data.turbidity < 5 else 'bg-danger text-white' }}">
+                <div class="card-body text-center py-4">
+                    <h1 class="display-1 mb-0">{{ data.turbidity }}</h1>
+                    <p class="lead mb-0">Turbidity (NTU)</p>
+                    <h3 class="mb-3">
+                        {% if data.turbidity < 1 %}Excellent
+                        {% elif data.turbidity < 5 %}Good
+                        {% else %}Poor
+                        {% endif %}
+                    </h3>
+                    
+                    <div class="mt-4">
+                        <p class="mb-0">
+                            <strong>Safe Level:</strong> < 1 NTU
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="row text-center">
+                        <div class="col">
+                            <h5>Water Clarity</h5>
+                            <p class="mb-0">
+                                {% if data.turbidity < 1 %}
+                                    Clear water with excellent visibility and low particulate matter.
+                                {% elif data.turbidity < 5 %}
+                                    Slightly cloudy water. May require basic filtration.
+                                {% else %}
+                                    Cloudy water with significant suspended particles. Treatment recommended.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 {{ 'bg-danger text-white' if data.dissolved_oxygen < 5 else 'bg-warning text-dark' if data.dissolved_oxygen < 7 else 'bg-success text-white' }}">
+                <div class="card-body text-center py-4">
+                    <h1 class="display-1 mb-0">{{ data.dissolved_oxygen }}</h1>
+                    <p class="lead mb-0">Dissolved Oxygen (mg/L)</p>
+                    <h3 class="mb-3">
+                        {% if data.dissolved_oxygen < 5 %}Low
+                        {% elif data.dissolved_oxygen < 7 %}Moderate
+                        {% else %}Optimal
+                        {% endif %}
+                    </h3>
+                    
+                    <div class="mt-4">
+                        <p class="mb-0">
+                            <strong>Healthy Range:</strong> 7 - 14 mg/L
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="row text-center">
+                        <div class="col">
+                            <h5>Aquatic Health</h5>
+                            <p class="mb-0">
+                                {% if data.dissolved_oxygen < 5 %}
+                                    Critical level. Aquatic life is stressed. Poor water quality.
+                                {% elif data.dissolved_oxygen < 7 %}
+                                    Acceptable but not ideal. Some sensitive species may be affected.
+                                {% else %}
+                                    Excellent for aquatic life. Indicates healthy water ecosystem.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Water Quality Chart -->
+    <div class="row mb-4">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Water Safety Guidelines</h5>
+                    <h4><i class="fas fa-chart-line me-2"></i>Water Quality Trends</h4>
+                </div>
+                <div class="card-body">
+                    <canvas id="water-quality-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Water Quality Additional Information -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="fas fa-info-circle me-2"></i>Water Quality Information</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <tbody>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-thermometer-half me-2"></i>Temperature</th>
+                                    <td>{{ data.temperature }}°C</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-tint me-2"></i>Humidity</th>
+                                    <td>{{ data.humidity }}%</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-wind me-2"></i>Wind Speed</th>
+                                    <td>{{ data.wind_speed }} m/s</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-cloud me-2"></i>Weather</th>
+                                    <td>{{ data.description|capitalize }}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-vial me-2"></i>pH Level</th>
+                                    <td>{{ data.ph }}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-eye me-2"></i>Turbidity</th>
+                                    <td>{{ data.turbidity }} NTU</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-air me-2"></i>Dissolved Oxygen</th>
+                                    <td>{{ data.dissolved_oxygen }} mg/L</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-hand-holding-water me-2"></i>Water Safety Recommendations</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert {{ 'alert-success' if data.ph >= 6.5 and data.ph <= 8.5 and data.turbidity < 1 and data.dissolved_oxygen >= 7 else 'alert-warning' if data.ph >= 6 and data.ph <= 9 and data.turbidity < 5 and data.dissolved_oxygen >= 5 else 'alert-danger' }}">
+                        <h5>
+                            <i class="fas {{ 'fa-check-circle' if data.ph >= 6.5 and data.ph <= 8.5 and data.turbidity < 1 and data.dissolved_oxygen >= 7 else 'fa-exclamation-triangle' if data.ph >= 6 and data.ph <= 9 and data.turbidity < 5 and data.dissolved_oxygen >= 5 else 'fa-times-circle' }} me-2"></i>
+                            Water is 
+                            {% if data.ph >= 6.5 and data.ph <= 8.5 and data.turbidity < 1 and data.dissolved_oxygen >= 7 %}
+                                safe for all uses
+                            {% elif data.ph >= 6 and data.ph <= 9 and data.turbidity < 5 and data.dissolved_oxygen >= 5 %}
+                                acceptable but caution advised
+                            {% else %}
+                                potentially unsafe - treatment recommended
+                            {% endif %}
+                        </h5>
+                    </div>
+                    <ul class="list-group mb-3">
+                        <li class="list-group-item">
+                            <i class="fas fa-drinking-water me-2"></i><strong>Drinking:</strong>
+                            {% if data.ph >= 6.5 and data.ph <= 8.5 and data.turbidity < 1 %}
+                                Safe after standard treatment
+                            {% else %}
+                                Additional filtration recommended
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-bath me-2"></i><strong>Bathing/Showering:</strong>
+                            {% if data.ph >= 6 and data.ph <= 9 and data.turbidity < 5 %}
+                                Safe for use
+                            {% else %}
+                                May cause skin/eye irritation
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-fish me-2"></i><strong>Aquatic Life:</strong>
+                            {% if data.dissolved_oxygen >= 7 and data.ph >= 6.5 and data.ph <= 8.5 %}
+                                Excellent conditions
+                            {% elif data.dissolved_oxygen >= 5 and data.ph >= 6 and data.ph <= 9 %}
+                                Adequate but some species may be stressed
+                            {% else %}
+                                Poor conditions for most aquatic life
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item">
+                            <i class="fas fa-swimming-pool me-2"></i><strong>Recreation:</strong>
+                            {% if data.turbidity < 5 and data.ph >= 6 and data.ph <= 9 %}
+                                Suitable for recreational activities
+                            {% else %}
+                                Not recommended for swimming or water sports
+                            {% endif %}
+                        </li>
+                    </ul>
+                    
+                    <h5 class="mt-4 mb-3">Treatment Recommendations</h5>
+                    <ul class="list-group">
+                        {% if data.ph < 6.5 %}
+                            <li class="list-group-item"><i class="fas fa-plus-circle me-2"></i>Add pH increaser (sodium carbonate)</li>
+                        {% elif data.ph > 8.5 %}
+                            <li class="list-group-item"><i class="fas fa-minus-circle me-2"></i>Add pH reducer (sodium bisulfate)</li>
+                        {% endif %}
+                        
+                        {% if data.turbidity >= 1 %}
+                            <li class="list-group-item"><i class="fas fa-filter me-2"></i>Filter water through sediment filter</li>
+                        {% endif %}
+                        
+                        {% if data.dissolved_oxygen < 7 %}
+                            <li class="list-group-item"><i class="fas fa-air me-2"></i>Aerate water to increase oxygen levels</li>
+                        {% endif %}
+                        
+                        {% if data.ph >= 6.5 and data.ph <= 8.5 and data.turbidity < 1 and data.dissolved_oxygen >= 7 %}
+                            <li class="list-group-item"><i class="fas fa-check-circle me-2"></i>Standard disinfection is adequate</li>
+                        {% else %}
+                            <li class="list-group-item"><i class="fas fa-shield-virus me-2"></i>Additional disinfection recommended</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Water Conservation Tips -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-leaf me-2"></i>Water Conservation Tips</h4>
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-6">
-                            <h6>Safe Drinking Water Parameters:</h6>
-                            <ul>
-                                <li>pH: 6.5-8.5</li>
-                                <li>Turbidity: <1 NTU</li>
-                                <li>Dissolved Oxygen: >6 mg/L</li>
-                            </ul>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-home me-2"></i>Household</h5>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Fix leaky faucets</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Install water-efficient fixtures</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Take shorter showers</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Run full loads of laundry/dishes</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Turn off water while brushing teeth</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <h6>Safety Measures:</h6>
-                            <ul>
-                                <li>Boil water before consumption</li>
-                                <li>Use water filtration systems</li>
-                                <li>Regular water quality testing</li>
-                            </ul>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-seedling me-2"></i>Garden & Lawn</h5>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Water early morning or evening</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Use drought-resistant plants</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Install drip irrigation</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Use mulch to retain moisture</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Collect rainwater for gardens</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-globe-americas me-2"></i>Community</h5>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Report water main breaks</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Participate in cleanup events</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Support watershed protection</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Educate others about water conservation</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Support water-efficient policies</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Map Section -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-map-marked-alt"></i> Water Quality Map
-                    </h5>
+    
+    {% else %}
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Water Quality Monitoring</h3>
                 </div>
                 <div class="card-body">
-                    <div id="map" style="height: 400px;"></div>
+                    <p class="lead">Enter a city name to view water quality data.</p>
+                    <form id="city-search-form" class="d-flex" method="get">
+                        <input id="city-input" class="form-control me-2" type="search" placeholder="Enter city name" aria-label="Search" name="city">
+                        <button class="btn btn-primary" type="submit">Search</button>
+                        <button id="fetch-location" class="btn btn-info ms-1" type="button" title="Use my location">
+                            <i class="fas fa-location-arrow"></i>
+                        </button>
+                    </form>
+                    <p class="mt-3">
+                        <small id="location-status" class="text-muted"></small>
+                    </p>
                 </div>
             </div>
         </div>
-    </div>
-    {% else %}
-    <div class="alert alert-info text-center">
-        <h4>Welcome to Water Quality Monitor!</h4>
-        <p>Please search for a city to view its water quality data.</p>
     </div>
     {% endif %}
 </div>
 {% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-{% if data %}
+{% block additional_js %}
+{% if historical %}
 <script>
-    var map = L.map('map').setView([{{ lat }}, {{ lon }}], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    L.circle([{{ lat }}, {{ lon }}], {
-        color: 'blue',
-        fillColor: '#30c',
-        fillOpacity: 0.5,
-        radius: 2000
-    }).addTo(map).bindPopup("<b>{{ location }}</b><br>pH: {{ data.ph }}").openPopup();
+document.addEventListener('DOMContentLoaded', function() {
+    // Generate simulated water quality data based on current values
+    const dates = {{ historical.dates|tojson }};
+    const dataLength = dates.length;
+    
+    // Generate data arrays
+    const phData = [];
+    const turbidityData = [];
+    const dissolvedOxygenData = [];
+    
+    // Current values as base
+    const basePh = {{ data.ph }};
+    const baseTurbidity = {{ data.turbidity }};
+    const baseDO = {{ data.dissolved_oxygen }};
+    
+    // Generate data with slight variations
+    for (let i = 0; i < dataLength; i++) {
+        phData.push(basePh + (Math.random() * 0.6 - 0.3));
+        turbidityData.push(baseTurbidity + (Math.random() * 1.0 - 0.5));
+        dissolvedOxygenData.push(baseDO + (Math.random() * 1.0 - 0.5));
+    }
+    
+    // Create water quality chart
+    createWaterQualityChart(dates, phData, turbidityData, dissolvedOxygenData);
+});
 </script>
 {% endif %}
 {% endblock %}

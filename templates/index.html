@@ -1,323 +1,314 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}EcoSafetyNet - Environmental & Disaster Management{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Header Section -->
+<div class="container">
+    {% if location %}
     <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="mb-2">Environmental Sustainability Dashboard</h1>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="/">Home</a></li>
-                            {% if location %}
-                            <li class="breadcrumb-item active">{{ location }}</li>
-                            {% endif %}
-                        </ol>
-                    </nav>
-                </div>
-                <div class="text-end">
-                    <div class="text-muted mb-2">Last updated: {{ last_updated }}</div>
-                    <form id="citySearchForm" method="GET" class="d-flex">
-                        <input type="text" name="city" class="form-control me-2" placeholder="Search city..." required>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </form>
+            <div class="card bg-dark text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>{{ location }}</h2>
+                        <span class="badge bg-info fs-6">Last Updated: {{ last_updated }}</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
-    {% if data %}
-    <!-- AQI Overview Section -->
+    
+    <!-- Alert Summary Section -->
     <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-wind me-2"></i>Air Quality Index
-                    </h5>
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Disaster Alerts</h3>
                 </div>
                 <div class="card-body">
-                    <div class="text-center">
-                        <div class="display-1 mb-3 
-                            {% if data.aqi <= 50 %}text-success
-                            {% elif data.aqi <= 100 %}text-warning
-                            {% elif data.aqi <= 150 %}text-orange
-                            {% elif data.aqi <= 200 %}text-danger
-                            {% else %}text-purple{% endif %}">
-                            {{ data.aqi }}
+                    {% if data.alerts and data.alerts|length > 0 %}
+                        <div class="row">
+                            {% for alert in data.alerts %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100 border-{{ alert_levels[alert.severity].color }}">
+                                        <div class="card-header bg-{{ alert_levels[alert.severity].color }} {% if alert.severity == 'critical' %}text-white{% elif alert.severity == 'medium' %}text-dark{% else %}text-white{% endif %}">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h5 class="mb-0">{{ alert.type }}</h5>
+                                                <span class="badge bg-light {% if alert.severity == 'critical' or alert.severity == 'high' %}text-dark{% else %}text-dark{% endif %}">{{ alert.severity|capitalize }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <p>{{ alert.description }}</p>
+                                            <p class="mb-0"><small class="text-muted">Date: {{ alert.date }}</small></p>
+                                            <p class="mb-0"><small class="text-muted">Status: {{ alert.status|capitalize }}</small></p>
+                                            <p class="mb-0"><small class="text-muted">Affected Area: {{ alert.affected_area }} km²</small></p>
+                                        </div>
+                                        <div class="card-footer">
+                                            <a href="/disaster-map?city={{ request.args.get('city', 'Delhi') }}" class="btn btn-sm btn-primary">View on Map</a>
+                                            <a href="/sos" class="btn btn-sm btn-danger float-end">Request Help</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
                         </div>
-                        <div class="aqi-status mb-3">
-                            <span class="badge 
-                                {% if data.aqi <= 50 %}bg-success
-                                {% elif data.aqi <= 100 %}bg-warning
-                                {% elif data.aqi <= 150 %}bg-orange
-                                {% elif data.aqi <= 200 %}bg-danger
-                                {% else %}bg-purple{% endif %}">
-                                {% if data.aqi <= 50 %}Good
-                                {% elif data.aqi <= 100 %}Moderate
-                                {% elif data.aqi <= 150 %}Unhealthy for Sensitive Groups
-                                {% elif data.aqi <= 200 %}Unhealthy
-                                {% else %}Very Unhealthy{% endif %}
-                            </span>
+                        <div class="text-center mt-2">
+                            <a href="/disaster-map?city={{ request.args.get('city', 'Delhi') }}" class="btn btn-outline-danger">View All Alerts</a>
                         </div>
-                        <div class="aqi-description small">
-                            {% if data.aqi <= 50 %}
-                            Air quality is satisfactory, and air pollution poses little or no risk.
-                            {% elif data.aqi <= 100 %}
-                            Air quality is acceptable. However, there may be a risk for some people.
-                            {% elif data.aqi <= 150 %}
-                            Members of sensitive groups may experience health effects.
-                            {% elif data.aqi <= 200 %}
-                            Everyone may begin to experience health effects.
-                            {% else %}
-                            Health alert: everyone may experience more serious health effects.
-                            {% endif %}
+                    {% else %}
+                        <div class="alert alert-success">
+                            <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>No active disaster alerts in this area</h5>
+                        </div>
+                        <p>Stay prepared by checking the <a href="/disaster-map?city={{ request.args.get('city', 'Delhi') }}">Disaster Map</a> for updates.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Dashboard -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 bg-primary text-white">
+                <div class="card-body text-center">
+                    <h2 class="display-4">{{ data.temperature }}°C</h2>
+                    <p class="lead mb-0">Temperature</p>
+                    <p class="mb-0">{{ data.description|capitalize }}</p>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="/weather?city={{ request.args.get('city', 'Delhi') }}" class="btn btn-outline-light btn-sm">Details</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 text-white {{ 'bg-success' if data.aqi <= 50 else 'bg-warning text-dark' if data.aqi <= 100 else 'bg-danger' if data.aqi <= 200 else 'bg-dark' }}">
+                <div class="card-body text-center">
+                    <h2 class="display-4">{{ data.aqi }}</h2>
+                    <p class="lead mb-0">Air Quality Index</p>
+                    <p class="mb-0">
+                        {% if data.aqi <= 50 %}Good
+                        {% elif data.aqi <= 100 %}Moderate
+                        {% elif data.aqi <= 150 %}Unhealthy for Sensitive Groups
+                        {% elif data.aqi <= 200 %}Unhealthy
+                        {% elif data.aqi <= 300 %}Very Unhealthy
+                        {% else %}Hazardous
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="/air-quality?city={{ request.args.get('city', 'Delhi') }}" class="btn btn-outline-light btn-sm">Details</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 bg-info text-white">
+                <div class="card-body text-center">
+                    <h2 class="display-4">{{ data.ph }}</h2>
+                    <p class="lead mb-0">Water pH</p>
+                    <p class="mb-0">
+                        {% if data.ph < 6.5 %}Acidic
+                        {% elif data.ph > 8.5 %}Alkaline
+                        {% else %}Normal
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="/water-quality?city={{ request.args.get('city', 'Delhi') }}" class="btn btn-outline-light btn-sm">Details</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 bg-success text-white">
+                <div class="card-body text-center">
+                    <h2 class="display-4">{{ data.sustainability.forest_cover }}%</h2>
+                    <p class="lead mb-0">Forest Cover</p>
+                    <p class="mb-0">
+                        {% if data.sustainability.forest_cover < 20 %}Critical
+                        {% elif data.sustainability.forest_cover < 30 %}Low
+                        {% else %}Moderate
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="/deforestation?city={{ request.args.get('city', 'Delhi') }}" class="btn btn-outline-light btn-sm">Details</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Historical Trends Chart -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4><i class="fas fa-temperature-high me-2"></i>Temperature Trend</h4>
+                </div>
+                <div class="card-body">
+                    <canvas id="temperature-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4><i class="fas fa-wind me-2"></i>Air Quality Trend</h4>
+                </div>
+                <div class="card-body">
+                    <canvas id="aqi-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Access Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="mb-0"><i class="fas fa-tools me-2"></i>Quick Actions</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4 mb-3">
+                            <a href="/sos" class="card h-100 emergency-card bg-danger text-white text-decoration-none">
+                                <div class="card-body">
+                                    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                                    <h4 class="mb-0">Emergency SOS</h4>
+                                    <p class="mb-0">Request immediate assistance</p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <a href="/disaster-map?city={{ request.args.get('city', 'Delhi') }}" class="card h-100 emergency-card bg-primary text-white text-decoration-none">
+                                <div class="card-body">
+                                    <i class="fas fa-map-marked-alt fa-3x mb-3"></i>
+                                    <h4 class="mb-0">Disaster Map</h4>
+                                    <p class="mb-0">View active incidents in the area</p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <a href="/deforestation?city={{ request.args.get('city', 'Delhi') }}" class="card h-100 emergency-card bg-success text-white text-decoration-none">
+                                <div class="card-body">
+                                    <i class="fas fa-tree fa-3x mb-3"></i>
+                                    <h4 class="mb-0">Deforestation Alerts</h4>
+                                    <p class="mb-0">Monitor forest cover changes</p>
+                                </div>
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-8">
+    </div>
+    
+    <!-- Sustainability Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-leaf me-2"></i>Sustainability Metrics</h4>
+                </div>
+                <div class="card-body">
+                    <canvas id="sustainability-chart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-3">
             <div class="card h-100">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-line me-2"></i>AQI Trend
-                    </h5>
+                    <h4 class="mb-0"><i class="fas fa-info-circle me-2"></i>Environmental Summary</h4>
                 </div>
                 <div class="card-body">
-                    <div id="aqiTrendChart" style="height: 300px;"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pollutant Details -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-microscope me-2"></i>Pollutant Breakdown</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-2">
-                            <div class="pollutant-card text-center p-3">
-                                <h6>PM2.5</h6>
-                                <div class="display-6">{{ data.pollutants.pm25 }}</div>
-                                <div class="small text-muted">μg/m³</div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="pollutant-card text-center p-3">
-                                <h6>PM10</h6>
-                                <div class="display-6">{{ data.pollutants.pm10 }}</div>
-                                <div class="small text-muted">μg/m³</div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="pollutant-card text-center p-3">
-                                <h6>NO2</h6>
-                                <div class="display-6">{{ data.pollutants.no2 }}</div>
-                                <div class="small text-muted">ppb</div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="pollutant-card text-center p-3">
-                                <h6>SO2</h6>
-                                <div class="display-6">{{ data.pollutants.so2 }}</div>
-                                <div class="small text-muted">ppb</div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="pollutant-card text-center p-3">
-                                <h6>CO</h6>
-                                <div class="display-6">{{ data.pollutants.co }}</div>
-                                <div class="small text-muted">ppm</div>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="pollutant-card text-center p-3">
-                                <h6>O3</h6>
-                                <div class="display-6">{{ data.pollutants.o3 }}</div>
-                                <div class="small text-muted">ppb</div>
-                            </div>
-                        </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <tbody>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-temperature-high me-2"></i>Temperature</th>
+                                    <td>{{ data.temperature }}°C</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-tint me-2"></i>Humidity</th>
+                                    <td>{{ data.humidity }}%</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-wind me-2"></i>Wind Speed</th>
+                                    <td>{{ data.wind_speed }} m/s</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-cloud me-2"></i>Conditions</th>
+                                    <td>{{ data.description|capitalize }}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-lungs me-2"></i>Air Quality</th>
+                                    <td>{{ data.aqi }} (AQI)</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-water me-2"></i>Water pH</th>
+                                    <td>{{ data.ph }}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-tree me-2"></i>Forest Cover</th>
+                                    <td>{{ data.sustainability.forest_cover }}%</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><i class="fas fa-recycle me-2"></i>Waste Recycled</th>
+                                    <td>{{ data.sustainability.waste_recycled }}%</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Climate and Weather Section -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-thermometer-half me-2"></i>Climate Metrics
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="text-center mb-4">
-                                <h6>Temperature</h6>
-                                <div class="display-4">{{ "%.1f"|format(data.temperature) }}°C</div>
-                                <p class="text-muted">{{ data.description }}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="text-center mb-4">
-                                <h6>Humidity</h6>
-                                <div class="display-4">{{ data.humidity }}%</div>
-                                <p class="text-muted">Relative Humidity</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="tempTrendChart" style="height: 200px;"></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-warning text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-map-marked-alt me-2"></i>Location Overview
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div id="map" style="height: 300px;"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Health Advisory Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-danger text-white">
-                    <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Health Advisory</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <h6>Sensitive Groups</h6>
-                            <ul class="list-unstyled">
-                                <li><i class="fas fa-child me-2"></i>Children</li>
-                                <li><i class="fas fa-user-plus me-2"></i>Elderly</li>
-                                <li><i class="fas fa-lungs me-2"></i>Asthma Patients</li>
-                                <li><i class="fas fa-heart me-2"></i>Heart Patients</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-8">
-                            <h6>Recommendations</h6>
-                            <div class="alert {% if data.aqi <= 50 %}alert-success
-                                        {% elif data.aqi <= 100 %}alert-warning
-                                        {% elif data.aqi <= 150 %}alert-orange
-                                        {% else %}alert-danger{% endif %}">
-                                {% if data.aqi <= 50 %}
-                                <ul class="mb-0">
-                                    <li>Enjoy outdoor activities</li>
-                                    <li>Perfect air quality for all groups</li>
-                                    <li>Continue normal activities</li>
-                                </ul>
-                                {% elif data.aqi <= 100 %}
-                                <ul class="mb-0">
-                                    <li>Sensitive individuals should limit prolonged outdoor exposure</li>
-                                    <li>Keep windows closed during peak pollution hours</li>
-                                    <li>Consider wearing masks outdoors</li>
-                                </ul>
-                                {% else %}
-                                <ul class="mb-0">
-                                    <li>Avoid outdoor activities</li>
-                                    <li>Wear N95 masks when going outside</li>
-                                    <li>Use air purifiers indoors</li>
-                                    <li>Keep windows closed</li>
-                                </ul>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    
     {% else %}
-    <div class="alert alert-info text-center">
-        <h4>Welcome to Environmental Sustainability Monitor!</h4>
-        <p>Please search for a city to view environmental data and sustainability metrics.</p>
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Welcome to EcoSafetyNet</h3>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Enter a city name to view environmental data and disaster alerts.</p>
+                    <form id="city-search-form" class="d-flex" method="get">
+                        <input id="city-input" class="form-control me-2" type="search" placeholder="Enter city name" aria-label="Search" name="city">
+                        <button class="btn btn-primary" type="submit">Search</button>
+                        <button id="fetch-location" class="btn btn-info ms-1" type="button" title="Use my location">
+                            <i class="fas fa-location-arrow"></i>
+                        </button>
+                    </form>
+                    <p class="mt-3">
+                        <small id="location-status" class="text-muted"></small>
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
     {% endif %}
 </div>
 {% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-<style>
-    .bg-orange {
-        background-color: #fd7e14 !important;
-    }
-    .bg-purple {
-        background-color: #6f42c1 !important;
-    }
-    .pollutant-card {
-        background-color: #f8f9fa;
-        border-radius: 10px;
-        transition: transform 0.3s ease;
-    }
-    .pollutant-card:hover {
-        transform: translateY(-5px);
-    }
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-{% if data and historical %}
+{% block additional_js %}
+{% if historical %}
 <script>
-    // Initialize map
-    var map = L.map('map').setView([{{ lat }}, {{ lon }}], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    // Add AQI marker
-    var aqiColor = '{{ "#28a745" if data.aqi <= 50 else "#ffc107" if data.aqi <= 100 else "#fd7e14" if data.aqi <= 150 else "#dc3545" }}';
-    var airQualityMarker = L.circle([{{ lat }}, {{ lon }}], {
-        color: aqiColor,
-        fillColor: aqiColor,
-        fillOpacity: 0.5,
-        radius: 2000
-    }).addTo(map);
-    airQualityMarker.bindPopup(`
-        <b>${{ location }}</b><br>
-        AQI: {{ data.aqi }}<br>
-        Temperature: {{ data.temperature }}°C<br>
-        Humidity: {{ data.humidity }}%
-    `).openPopup();
-
-    // Create time series data
-    const timeSeriesData = {
-        dates: {{ historical.dates|tojson }},
-        temperatures: {{ historical.temperatures|tojson }},
-        aqi: {{ historical.aqi|tojson }},
-        humidity: {{ historical.humidity|tojson }}
-    };
-
-    // Initialize trend graphs
-    createTimeSeriesGraphs(timeSeriesData);
+document.addEventListener('DOMContentLoaded', function() {
+    // Create temperature chart
+    createTemperatureChart({{ historical.dates|tojson }}, {{ historical.temperatures|tojson }});
+    
+    // Create AQI chart
+    createAQIChart({{ historical.dates|tojson }}, {{ historical.aqi|tojson }});
+    
+    // Create sustainability chart
+    createSustainabilityChart({{ data.sustainability|tojson }});
+});
 </script>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,525 @@
+{% extends 'base.html' %}
+
+{% block title %}Disaster Map - EcoSafetyNet{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% if location %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-dark text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Disaster Map: {{ location }}</h2>
+                        <span class="badge bg-info fs-6">Last Updated: {{ last_updated }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Disaster Map Section -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="fas fa-map me-2"></i>Active Disasters and Alerts</h4>
+                        <div>
+                            <a href="/sos" class="btn btn-danger btn-sm">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Emergency SOS
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Interactive Map -->
+                    <div id="disaster-map"></div>
+                </div>
+                <div class="card-footer">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <label class="input-group-text" for="disaster-type-filter">Disaster Type:</label>
+                                <select class="form-select disaster-filter" id="disaster-type-filter">
+                                    <option value="all" selected>All Types</option>
+                                    <option value="Wildfire">Wildfire</option>
+                                    <option value="Flood">Flood</option>
+                                    <option value="Earthquake">Earthquake</option>
+                                    <option value="Hurricane">Hurricane</option>
+                                    <option value="Tornado">Tornado</option>
+                                    <option value="Tsunami">Tsunami</option>
+                                    <option value="Drought">Drought</option>
+                                    <option value="Landslide">Landslide</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <label class="input-group-text" for="severity-filter">Severity:</label>
+                                <select class="form-select disaster-filter" id="severity-filter">
+                                    <option value="all" selected>All Levels</option>
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="critical">Critical</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Disaster List and Info -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <ul class="nav nav-pills card-header-pills" id="disaster-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="alerts-tab" data-bs-toggle="tab" data-bs-target="#alerts" type="button" role="tab" aria-controls="alerts" aria-selected="true">
+                                <i class="fas fa-exclamation-circle me-1"></i>Alerts
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab" aria-controls="info" aria-selected="false">
+                                <i class="fas fa-info-circle me-1"></i>Info
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="resources-tab" data-bs-toggle="tab" data-bs-target="#resources" type="button" role="tab" aria-controls="resources" aria-selected="false">
+                                <i class="fas fa-medkit me-1"></i>Resources
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="disaster-tab-content">
+                        <!-- Alerts Tab -->
+                        <div class="tab-pane fade show active" id="alerts" role="tabpanel" aria-labelledby="alerts-tab">
+                            <h5 class="mb-3">Disaster Alerts</h5>
+                            <div id="disasters-list" class="overflow-auto" style="max-height: 500px;">
+                                <!-- Alerts will be dynamically populated here by JavaScript -->
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading disaster data...</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Info Tab -->
+                        <div class="tab-pane fade" id="info" role="tabpanel" aria-labelledby="info-tab">
+                            <h5 class="mb-3">About Disaster Alerts</h5>
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle me-2"></i>Alert Severity Levels</h6>
+                                <ul class="list-unstyled mb-0">
+                                    {% for level, details in alert_levels.items() %}
+                                    <li class="mb-2">
+                                        <span class="badge bg-{{ details.color }} me-2">{{ level|upper }}</span>
+                                        {{ details.description }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            
+                            <div class="card border-primary mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="fas fa-map-marker-alt me-2"></i>Map Legend</h6>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item d-flex align-items-center">
+                                            <span class="badge bg-success me-2" style="width: 20px; height: 20px;"></span>
+                                            Low Severity
+                                        </li>
+                                        <li class="list-group-item d-flex align-items-center">
+                                            <span class="badge bg-warning me-2" style="width: 20px; height: 20px;"></span>
+                                            Medium Severity
+                                        </li>
+                                        <li class="list-group-item d-flex align-items-center">
+                                            <span class="badge bg-danger me-2" style="width: 20px; height: 20px;"></span>
+                                            High Severity
+                                        </li>
+                                        <li class="list-group-item d-flex align-items-center">
+                                            <span class="badge bg-dark me-2" style="width: 20px; height: 20px;"></span>
+                                            Critical Severity
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-exclamation-triangle me-2"></i>Disclaimer</h6>
+                                <p class="mb-0 small">The disaster information provided is for informational purposes only. Always follow official guidance from local authorities during emergencies.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Resources Tab -->
+                        <div class="tab-pane fade" id="resources" role="tabpanel" aria-labelledby="resources-tab">
+                            <h5 class="mb-3">Emergency Resources</h5>
+                            
+                            <div class="accordion" id="emergencyAccordion">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="evacuationHeading">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#evacuationCollapse" aria-expanded="true" aria-controls="evacuationCollapse">
+                                            <i class="fas fa-running me-2"></i>Evacuation Guidelines
+                                        </button>
+                                    </h2>
+                                    <div id="evacuationCollapse" class="accordion-collapse collapse show" aria-labelledby="evacuationHeading" data-bs-parent="#emergencyAccordion">
+                                        <div class="accordion-body">
+                                            <ul class="list-unstyled">
+                                                <li><i class="fas fa-check-circle text-success me-2"></i>Stay calm and follow official evacuation orders</li>
+                                                <li><i class="fas fa-check-circle text-success me-2"></i>Take emergency kit and essential documents</li>
+                                                <li><i class="fas fa-check-circle text-success me-2"></i>Follow designated evacuation routes</li>
+                                                <li><i class="fas fa-check-circle text-success me-2"></i>If possible, bring pets in carriers</li>
+                                                <li><i class="fas fa-check-circle text-success me-2"></i>Lock your home when leaving</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="emergencyContactsHeading">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#emergencyContactsCollapse" aria-expanded="false" aria-controls="emergencyContactsCollapse">
+                                            <i class="fas fa-phone-alt me-2"></i>Emergency Contacts
+                                        </button>
+                                    </h2>
+                                    <div id="emergencyContactsCollapse" class="accordion-collapse collapse" aria-labelledby="emergencyContactsHeading" data-bs-parent="#emergencyAccordion">
+                                        <div class="accordion-body">
+                                            <ul class="list-group">
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    Emergency Services
+                                                    <span class="badge bg-danger">911</span>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    Disaster Relief
+                                                    <span class="badge bg-primary">108</span>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    Fire Department
+                                                    <span class="badge bg-danger">101</span>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    Ambulance
+                                                    <span class="badge bg-success">102</span>
+                                                </li>
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    Police
+                                                    <span class="badge bg-primary">100</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="disasterKitHeading">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#disasterKitCollapse" aria-expanded="false" aria-controls="disasterKitCollapse">
+                                            <i class="fas fa-first-aid me-2"></i>Emergency Kit Checklist
+                                        </button>
+                                    </h2>
+                                    <div id="disasterKitCollapse" class="accordion-collapse collapse" aria-labelledby="disasterKitHeading" data-bs-parent="#emergencyAccordion">
+                                        <div class="accordion-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <h6>Essentials</h6>
+                                                    <ul class="list-unstyled">
+                                                        <li><i class="fas fa-check text-success me-2"></i>Water (1 gallon/person/day)</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Non-perishable food</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>First aid kit</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Flashlight & batteries</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Emergency blanket</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <h6>Documents</h6>
+                                                    <ul class="list-unstyled">
+                                                        <li><i class="fas fa-check text-success me-2"></i>ID/passport</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Insurance policies</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Medical records</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Emergency contacts</li>
+                                                        <li><i class="fas fa-check text-success me-2"></i>Cash in small denominations</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <a href="/sos" class="btn btn-danger w-100">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Access Emergency SOS
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics and Information -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Disaster Statistics</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="disaster-stats">
+                        <!-- Statistics will be populated by JavaScript -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="display-4" id="total-disasters">-</h3>
+                                    <p class="mb-0">Total Incidents</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="display-4" id="active-disasters">-</h3>
+                                    <p class="mb-0">Active Incidents</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="display-4" id="affected-area">-</h3>
+                                    <p class="mb-0">Area Affected (km²)</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="display-4" id="affected-population">-</h3>
+                                    <p class="mb-0">People Affected</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Safety Guidelines by Disaster Type -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Safety Guidelines</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="safetyTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="wildfire-tab" data-bs-toggle="tab" data-bs-target="#wildfire" type="button" role="tab" aria-controls="wildfire" aria-selected="true">Wildfire</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="flood-tab" data-bs-toggle="tab" data-bs-target="#flood" type="button" role="tab" aria-controls="flood" aria-selected="false">Flood</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="earthquake-tab" data-bs-toggle="tab" data-bs-target="#earthquake" type="button" role="tab" aria-controls="earthquake" aria-selected="false">Earthquake</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="hurricane-tab" data-bs-toggle="tab" data-bs-target="#hurricane" type="button" role="tab" aria-controls="hurricane" aria-selected="false">Hurricane</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tornado-tab" data-bs-toggle="tab" data-bs-target="#tornado" type="button" role="tab" aria-controls="tornado" aria-selected="false">Tornado</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content mt-3" id="safetyTabContent">
+                        <div class="tab-pane fade show active" id="wildfire" role="tabpanel" aria-labelledby="wildfire-tab">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-fire me-2 text-danger"></i>Before a Wildfire</h5>
+                                    <ul>
+                                        <li>Create a defensible space around your home</li>
+                                        <li>Clear leaves and other debris from gutters, eaves, porches, and decks</li>
+                                        <li>Remove dead vegetation from under decks and within 10 feet of the house</li>
+                                        <li>Remove flammable materials from within 30 feet of all structures</li>
+                                        <li>Prepare an emergency kit and evacuation plan</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-running me-2 text-danger"></i>During a Wildfire</h5>
+                                    <ul>
+                                        <li>Evacuate immediately if authorities order it</li>
+                                        <li>If trapped, call 911 and give your location</li>
+                                        <li>Wear protective clothing and footwear</li>
+                                        <li>Stay low to the ground if surrounded by smoke</li>
+                                        <li>Watch for spot fires and burning embers</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="flood" role="tabpanel" aria-labelledby="flood-tab">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-water me-2 text-primary"></i>Before a Flood</h5>
+                                    <ul>
+                                        <li>Know your area's flood risk</li>
+                                        <li>Prepare an emergency kit and evacuation plan</li>
+                                        <li>Move valuables to higher levels</li>
+                                        <li>Consider flood insurance</li>
+                                        <li>Install check valves in plumbing</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-swimmer me-2 text-primary"></i>During a Flood</h5>
+                                    <ul>
+                                        <li>Listen to emergency information</li>
+                                        <li>Never walk, swim, or drive through flood waters</li>
+                                        <li>Stay off bridges over fast-moving water</li>
+                                        <li>Evacuate if told to do so</li>
+                                        <li>Move to higher ground or a higher floor</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="earthquake" role="tabpanel" aria-labelledby="earthquake-tab">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-house-damage me-2 text-warning"></i>Before an Earthquake</h5>
+                                    <ul>
+                                        <li>Secure heavy furniture and appliances</li>
+                                        <li>Know where and how to shut off utilities</li>
+                                        <li>Store heavy items on lower shelves</li>
+                                        <li>Practice "Drop, Cover, and Hold On"</li>
+                                        <li>Prepare an emergency kit</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-exclamation-triangle me-2 text-warning"></i>During an Earthquake</h5>
+                                    <ul>
+                                        <li>Drop to the ground, take cover under sturdy furniture, and hold on</li>
+                                        <li>Stay away from windows and exterior walls</li>
+                                        <li>If outdoors, stay in open areas away from buildings</li>
+                                        <li>If in a vehicle, pull over and stay inside</li>
+                                        <li>Prepare for aftershocks</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="hurricane" role="tabpanel" aria-labelledby="hurricane-tab">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-cloud-showers-heavy me-2 text-info"></i>Before a Hurricane</h5>
+                                    <ul>
+                                        <li>Know your evacuation route</li>
+                                        <li>Prepare your home by covering windows and securing loose objects</li>
+                                        <li>Create an emergency supply kit</li>
+                                        <li>Fill your car with gas</li>
+                                        <li>Have enough food and water for at least 3 days</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-wind me-2 text-info"></i>During a Hurricane</h5>
+                                    <ul>
+                                        <li>Follow evacuation orders immediately</li>
+                                        <li>If not evacuating, stay indoors away from windows</li>
+                                        <li>Listen to a battery-powered radio for updates</li>
+                                        <li>Turn refrigerator to coldest setting</li>
+                                        <li>If power goes out, turn off major appliances</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tornado" role="tabpanel" aria-labelledby="tornado-tab">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-cloud-meatball me-2 text-secondary"></i>Before a Tornado</h5>
+                                    <ul>
+                                        <li>Know the signs of a tornado</li>
+                                        <li>Identify a safe room in your home</li>
+                                        <li>Practice tornado drills</li>
+                                        <li>Have an emergency kit ready</li>
+                                        <li>Stay informed about weather alerts</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5><i class="fas fa-tornado me-2 text-secondary"></i>During a Tornado</h5>
+                                    <ul>
+                                        <li>Go to the lowest level of the building</li>
+                                        <li>Stay away from windows and outside walls</li>
+                                        <li>Get under sturdy furniture and protect your head</li>
+                                        <li>If outside, lie flat in a nearby ditch</li>
+                                        <li>Never try to outrun a tornado in a vehicle</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Disaster Map</h3>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Enter a city or region name to view disaster alerts and information.</p>
+                    <form id="city-search-form" class="d-flex" method="get">
+                        <input id="city-input" class="form-control me-2" type="search" placeholder="Enter city name" aria-label="Search" name="city">
+                        <button class="btn btn-primary" type="submit">Search</button>
+                        <button id="fetch-location" class="btn btn-info ms-1" type="button" title="Use my location">
+                            <i class="fas fa-location-arrow"></i>
+                        </button>
+                    </form>
+                    <p class="mt-3">
+                        <small id="location-status" class="text-muted"></small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block additional_js %}
+{% if lat and lon %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the disaster map
+    initMap({{ lat }}, {{ lon }});
+    
+    // Update disaster statistics when map is loaded
+    function updateDisasterStats(disasters) {
+        if (!disasters || disasters.length === 0) return;
+        
+        const totalDisasters = disasters.length;
+        const activeDisasters = disasters.filter(d => d.status === 'active').length;
+        
+        let totalArea = 0;
+        let totalPopulation = 0;
+        
+        disasters.forEach(d => {
+            totalArea += d.affected_area || 0;
+            totalPopulation += d.affected_population || 0;
+        });
+        
+        document.getElementById('total-disasters').textContent = totalDisasters;
+        document.getElementById('active-disasters').textContent = activeDisasters;
+        document.getElementById('affected-area').textContent = totalArea.toFixed(1);
+        document.getElementById('affected-population').textContent = totalPopulation.toLocaleString();
+    }
+    
+    // Listen for when disaster data is loaded
+    document.addEventListener('disastersLoaded', function(e) {
+        updateDisasterStats(e.detail.disasters);
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

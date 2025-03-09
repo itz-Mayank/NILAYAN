@@ -1,141 +1,395 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
-{% block title %}Air Quality{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-{% endblock %}
+{% block title %}Air Quality - EcoSafetyNet{% endblock %}
 
 {% block content %}
 <div class="container">
-    <!-- Search Form -->
+    {% if location %}
     <div class="row mb-4">
-        <div class="col-md-6 mx-auto">
-            <div class="search-form">
-                <form id="citySearchForm" method="GET" class="d-flex">
-                    <input type="text" name="city" class="form-control me-2" placeholder="Enter city name (e.g., Delhi, Mumbai)" required>
-                    <button type="submit" class="btn btn-primary">Search</button>
-                </form>
+        <div class="col-12">
+            <div class="card bg-dark text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0"><i class="fas fa-wind me-2"></i>Air Quality: {{ location }}</h2>
+                        <span class="badge bg-info fs-6">Last Updated: {{ last_updated }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-
-    {% if data %}
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card mb-4">
+    
+    <!-- Air Quality Index Card -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card text-white {{ 'bg-success' if data.aqi <= 50 else 'bg-warning text-dark' if data.aqi <= 100 else 'bg-danger' if data.aqi <= 200 else 'bg-dark' }}">
+                <div class="card-body text-center py-4">
+                    <h1 class="display-1 mb-0">{{ data.aqi }}</h1>
+                    <p class="lead mb-0">Air Quality Index</p>
+                    <h3 class="mb-3">
+                        {% if data.aqi <= 50 %}Good
+                        {% elif data.aqi <= 100 %}Moderate
+                        {% elif data.aqi <= 150 %}Unhealthy for Sensitive Groups
+                        {% elif data.aqi <= 200 %}Unhealthy
+                        {% elif data.aqi <= 300 %}Very Unhealthy
+                        {% else %}Hazardous
+                        {% endif %}
+                    </h3>
+                    
+                    <div class="mt-4">
+                        <p class="mb-1">
+                            <i class="fas fa-thermometer-half me-2"></i>Temperature: {{ data.temperature }}°C
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-tint me-2"></i>Humidity: {{ data.humidity }}%
+                        </p>
+                        <p class="mb-0">
+                            <i class="fas fa-wind me-2"></i>Wind: {{ data.wind_speed }} m/s
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="row text-center">
+                        <div class="col">
+                            <h5>Health Impact</h5>
+                            <p class="mb-0">
+                                {% if data.aqi <= 50 %}
+                                    Minimal impact - Air quality is considered satisfactory.
+                                {% elif data.aqi <= 100 %}
+                                    Minor respiratory concerns for sensitive individuals.
+                                {% elif data.aqi <= 150 %}
+                                    Members of sensitive groups may experience health effects.
+                                {% elif data.aqi <= 200 %}
+                                    Everyone may begin to experience health effects.
+                                {% elif data.aqi <= 300 %}
+                                    Health alert - risk of health effects for everyone.
+                                {% else %}
+                                    Health warning - everyone may experience serious health effects.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-wind"></i> Air Quality Index
-                    </h5>
+                    <h4><i class="fas fa-chart-line me-2"></i>Air Quality Trend</h4>
                 </div>
                 <div class="card-body">
-                    <div class="display-1 text-center mb-3 
-                        {% if data.aqi <= 2 %}text-success
-                        {% elif data.aqi <= 3 %}text-warning
-                        {% else %}text-danger{% endif %}">
-                        {{ data.aqi }}
+                    <canvas id="aqi-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pollutants Details -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="fas fa-microscope me-2"></i>Pollutants Breakdown</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">PM2.5</h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <h2 class="display-4">{{ data.pollutants.pm25 }}</h2>
+                                    <p class="lead">μg/m³</p>
+                                    <p>
+                                        {% if data.pollutants.pm25 <= 12 %}Good
+                                        {% elif data.pollutants.pm25 <= 35.4 %}Moderate
+                                        {% elif data.pollutants.pm25 <= 55.4 %}Unhealthy for Sensitive Groups
+                                        {% elif data.pollutants.pm25 <= 150.4 %}Unhealthy
+                                        {% elif data.pollutants.pm25 <= 250.4 %}Very Unhealthy
+                                        {% else %}Hazardous
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="card-footer">
+                                    <small class="text-muted">Fine particles that can penetrate deep into lungs</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0">PM10</h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <h2 class="display-4">{{ data.pollutants.pm10 }}</h2>
+                                    <p class="lead">μg/m³</p>
+                                    <p>
+                                        {% if data.pollutants.pm10 <= 54 %}Good
+                                        {% elif data.pollutants.pm10 <= 154 %}Moderate
+                                        {% elif data.pollutants.pm10 <= 254 %}Unhealthy for Sensitive Groups
+                                        {% elif data.pollutants.pm10 <= 354 %}Unhealthy
+                                        {% elif data.pollutants.pm10 <= 424 %}Very Unhealthy
+                                        {% else %}Hazardous
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="card-footer">
+                                    <small class="text-muted">Inhalable particles from dust and combustion</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-danger">
+                                <div class="card-header bg-danger text-white">
+                                    <h5 class="mb-0">NO₂</h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <h2 class="display-4">{{ data.pollutants.no2 }}</h2>
+                                    <p class="lead">μg/m³</p>
+                                    <p>
+                                        {% if data.pollutants.no2 <= 53 %}Good
+                                        {% elif data.pollutants.no2 <= 100 %}Moderate
+                                        {% elif data.pollutants.no2 <= 360 %}Unhealthy for Sensitive Groups
+                                        {% elif data.pollutants.no2 <= 649 %}Unhealthy
+                                        {% elif data.pollutants.no2 <= 1249 %}Very Unhealthy
+                                        {% else %}Hazardous
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="card-footer">
+                                    <small class="text-muted">Mainly from vehicle exhaust and power plants</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">SO₂</h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <h2 class="display-4">{{ data.pollutants.so2 }}</h2>
+                                    <p class="lead">μg/m³</p>
+                                    <p>
+                                        {% if data.pollutants.so2 <= 35 %}Good
+                                        {% elif data.pollutants.so2 <= 75 %}Moderate
+                                        {% elif data.pollutants.so2 <= 185 %}Unhealthy for Sensitive Groups
+                                        {% elif data.pollutants.so2 <= 304 %}Unhealthy
+                                        {% elif data.pollutants.so2 <= 604 %}Very Unhealthy
+                                        {% else %}Hazardous
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="card-footer">
+                                    <small class="text-muted">From burning fossil fuels with sulfur content</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-secondary">
+                                <div class="card-header bg-secondary text-white">
+                                    <h5 class="mb-0">CO</h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <h2 class="display-4">{{ data.pollutants.co }}</h2>
+                                    <p class="lead">mg/m³</p>
+                                    <p>
+                                        {% if data.pollutants.co <= 4.4 %}Good
+                                        {% elif data.pollutants.co <= 9.4 %}Moderate
+                                        {% elif data.pollutants.co <= 12.4 %}Unhealthy for Sensitive Groups
+                                        {% elif data.pollutants.co <= 15.4 %}Unhealthy
+                                        {% elif data.pollutants.co <= 30.4 %}Very Unhealthy
+                                        {% else %}Hazardous
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="card-footer">
+                                    <small class="text-muted">Colorless, odorless gas from incomplete combustion</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100 border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0">O₃</h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <h2 class="display-4">{{ data.pollutants.o3 }}</h2>
+                                    <p class="lead">μg/m³</p>
+                                    <p>
+                                        {% if data.pollutants.o3 <= 54 %}Good
+                                        {% elif data.pollutants.o3 <= 70 %}Moderate
+                                        {% elif data.pollutants.o3 <= 85 %}Unhealthy for Sensitive Groups
+                                        {% elif data.pollutants.o3 <= 105 %}Unhealthy
+                                        {% elif data.pollutants.o3 <= 200 %}Very Unhealthy
+                                        {% else %}Hazardous
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="card-footer">
+                                    <small class="text-muted">Ground-level ozone from vehicle emissions and sunlight</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="text-center mb-4">
-                        <span class="badge {% if data.aqi <= 2 %}bg-success{% elif data.aqi <= 3 %}bg-warning{% else %}bg-danger{% endif %}">
-                            {% if data.aqi <= 2 %}Good
-                            {% elif data.aqi <= 3 %}Moderate
-                            {% else %}Poor{% endif %}
-                        </span>
-                    </div>
-
-                    <!-- Health Recommendations -->
-                    <div class="alert {% if data.aqi <= 2 %}alert-success{% elif data.aqi <= 3 %}alert-warning{% else %}alert-danger{% endif %}">
-                        <h5>Health Advisory:</h5>
-                        {% if data.aqi <= 2 %}
-                        <p>Air quality is good. Perfect for outdoor activities!</p>
-                        {% elif data.aqi <= 3 %}
-                        <p>Sensitive individuals should limit prolonged outdoor exertion.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pollutants Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-chart-area me-2"></i>Pollutants Trend</h4>
+                </div>
+                <div class="card-body">
+                    <canvas id="pollutants-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Health Recommendations -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header 
+                    {{ 'bg-success text-white' if data.aqi <= 50 else 
+                       'bg-warning text-dark' if data.aqi <= 100 else 
+                       'bg-danger text-white' if data.aqi <= 200 else 
+                       'bg-dark text-white' }}">
+                    <h4 class="mb-0"><i class="fas fa-heart me-2"></i>Health Recommendations</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% if data.aqi <= 50 %}
+                        <div class="col-md-12">
+                            <div class="alert alert-success">
+                                <h5><i class="fas fa-check-circle me-2"></i>Good Air Quality</h5>
+                                <p class="mb-0">Air quality is considered satisfactory, and air pollution poses little or no risk.</p>
+                            </div>
+                            <ul class="list-group">
+                                <li class="list-group-item"><i class="fas fa-check me-2"></i>Enjoy outdoor activities</li>
+                                <li class="list-group-item"><i class="fas fa-check me-2"></i>Open windows to bring in fresh air</li>
+                                <li class="list-group-item"><i class="fas fa-check me-2"></i>Ideal conditions for exercise</li>
+                            </ul>
+                        </div>
+                        {% elif data.aqi <= 100 %}
+                        <div class="col-md-12">
+                            <div class="alert alert-warning">
+                                <h5><i class="fas fa-exclamation-circle me-2"></i>Moderate Air Quality</h5>
+                                <p class="mb-0">Air quality is acceptable; however, there may be a moderate health concern for a very small number of people who are unusually sensitive to air pollution.</p>
+                            </div>
+                            <ul class="list-group">
+                                <li class="list-group-item"><i class="fas fa-exclamation-triangle me-2"></i>Sensitive individuals should consider reducing prolonged outdoor exertion</li>
+                                <li class="list-group-item"><i class="fas fa-check me-2"></i>Most people can continue normal activities</li>
+                                <li class="list-group-item"><i class="fas fa-check me-2"></i>Keep windows closed during peak traffic hours</li>
+                            </ul>
+                        </div>
+                        {% elif data.aqi <= 150 %}
+                        <div class="col-md-12">
+                            <div class="alert alert-warning">
+                                <h5><i class="fas fa-exclamation-triangle me-2"></i>Unhealthy for Sensitive Groups</h5>
+                                <p class="mb-0">Members of sensitive groups may experience health effects. The general public is not likely to be affected.</p>
+                            </div>
+                            <ul class="list-group">
+                                <li class="list-group-item"><i class="fas fa-exclamation-triangle me-2"></i>People with respiratory or heart conditions, the elderly and children should limit prolonged outdoor exertion</li>
+                                <li class="list-group-item"><i class="fas fa-exclamation-triangle me-2"></i>Consider moving outdoor activities indoors or rescheduling</li>
+                                <li class="list-group-item"><i class="fas fa-exclamation-triangle me-2"></i>Keep windows closed and use air purifiers if available</li>
+                            </ul>
+                        </div>
+                        {% elif data.aqi <= 200 %}
+                        <div class="col-md-12">
+                            <div class="alert alert-danger">
+                                <h5><i class="fas fa-times-circle me-2"></i>Unhealthy Air Quality</h5>
+                                <p class="mb-0">Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects.</p>
+                            </div>
+                            <ul class="list-group">
+                                <li class="list-group-item"><i class="fas fa-times me-2"></i>Avoid prolonged or heavy exertion outdoors</li>
+                                <li class="list-group-item"><i class="fas fa-times me-2"></i>Sensitive groups should stay indoors and keep activity levels low</li>
+                                <li class="list-group-item"><i class="fas fa-times me-2"></i>Use air purifiers and keep windows closed</li>
+                                <li class="list-group-item"><i class="fas fa-times me-2"></i>Wear a mask (N95 or equivalent) if outdoor activities are unavoidable</li>
+                            </ul>
+                        </div>
+                        {% elif data.aqi <= 300 %}
+                        <div class="col-md-12">
+                            <div class="alert alert-danger">
+                                <h5><i class="fas fa-radiation me-2"></i>Very Unhealthy Air Quality</h5>
+                                <p class="mb-0">Health alert: everyone may experience more serious health effects.</p>
+                            </div>
+                            <ul class="list-group">
+                                <li class="list-group-item"><i class="fas fa-times me-2"></i>Avoid all outdoor physical activities</li>
+                                <li class="list-group-item"><i class="fas fa-times me-2"></i>Remain indoors with windows and doors closed</li>
+                                <li class="list-group-item"><i class="fas fa-times me-2"></i>Run air purifiers if available</li>
+                                <li class="list-group-item"><i class="fas fa-times me-2"></i>Wear masks (N95 or equivalent) if going outdoors is necessary</li>
+                                <li class="list-group-item"><i class="fas fa-times me-2"></i>Consider relocating temporarily if conditions persist</li>
+                            </ul>
+                        </div>
                         {% else %}
-                        <ul class="mb-0">
-                            <li>Avoid outdoor activities</li>
-                            <li>Wear N95 masks when going outside</li>
-                            <li>Keep windows closed</li>
-                            <li>Use air purifiers indoors</li>
-                        </ul>
+                        <div class="col-md-12">
+                            <div class="alert alert-dark">
+                                <h5><i class="fas fa-skull-crossbones me-2"></i>Hazardous Air Quality</h5>
+                                <p class="mb-0">Health emergency: everyone is more likely to be affected.</p>
+                            </div>
+                            <ul class="list-group">
+                                <li class="list-group-item"><i class="fas fa-exclamation-circle me-2"></i>Stay indoors with windows and doors closed</li>
+                                <li class="list-group-item"><i class="fas fa-exclamation-circle me-2"></i>Avoid all physical activities outdoors</li>
+                                <li class="list-group-item"><i class="fas fa-exclamation-circle me-2"></i>Use air purifiers and wear masks even indoors if air quality is poor</li>
+                                <li class="list-group-item"><i class="fas fa-exclamation-circle me-2"></i>Consider evacuation to less polluted areas if possible</li>
+                                <li class="list-group-item"><i class="fas fa-exclamation-circle me-2"></i>Seek medical attention if experiencing symptoms</li>
+                            </ul>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
-
-            <!-- AQI Trend Graph -->
-            <div class="graph-container">
-                <h5 class="mb-3">AQI Trend (Last 7 Days)</h5>
-                <div id="aqiChart" style="height: 400px;"></div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-info-circle"></i> Additional Information
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Temperature:</strong> {{ "%.1f"|format(data.temperature) }}°C</p>
-                    <p><strong>Humidity:</strong> {{ data.humidity }}%</p>
-                    <p><strong>Weather:</strong> {{ data.description|capitalize }}</p>
-                    <p><strong>Last Updated:</strong> {{ last_updated }}</p>
-                </div>
-            </div>
-
-            <!-- Map Card -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-map-marked-alt"></i> Location
-                    </h5>
-                </div>
-                <div class="card-body p-0">
-                    <div id="map" style="height: 300px; border-radius: 0 0 12px 12px;"></div>
-                </div>
-            </div>
         </div>
     </div>
+    
     {% else %}
-    <div class="alert alert-info text-center">
-        <h4>Welcome to Air Quality Monitor!</h4>
-        <p>Please search for a city to view its air quality data.</p>
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Air Quality Monitoring</h3>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Enter a city name to view air quality data.</p>
+                    <form id="city-search-form" class="d-flex" method="get">
+                        <input id="city-input" class="form-control me-2" type="search" placeholder="Enter city name" aria-label="Search" name="city">
+                        <button class="btn btn-primary" type="submit">Search</button>
+                        <button id="fetch-location" class="btn btn-info ms-1" type="button" title="Use my location">
+                            <i class="fas fa-location-arrow"></i>
+                        </button>
+                    </form>
+                    <p class="mt-3">
+                        <small id="location-status" class="text-muted"></small>
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
     {% endif %}
 </div>
 {% endblock %}
 
-{% block extra_js %}
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-{% if data and historical %}
+{% block additional_js %}
+{% if historical %}
 <script>
-    // Initialize map
-    var map = L.map('map').setView([{{ lat }}, {{ lon }}], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    // Add AQI marker
-    var marker = L.circle([{{ lat }}, {{ lon }}], {
-        color: '{{ "#28a745" if data.aqi <= 2 else "#ffc107" if data.aqi <= 3 else "#dc3545" }}',
-        fillColor: '{{ "#28a745" if data.aqi <= 2 else "#ffc107" if data.aqi <= 3 else "#dc3545" }}',
-        fillOpacity: 0.5,
-        radius: 2000
-    }).addTo(map);
-    marker.bindPopup("<b>AQI: {{ data.aqi }}</b><br>{{ location }}").openPopup();
-
-    // Create time series data for graphs
-    const timeSeriesData = {
-        dates: {{ historical.dates|tojson }},
-        aqi: {{ historical.aqi|tojson }}
-    };
-
-    // Initialize graphs
-    createTimeSeriesGraphs(timeSeriesData);
+document.addEventListener('DOMContentLoaded', function() {
+    // Create AQI chart
+    createAQIChart({{ historical.dates|tojson }}, {{ historical.aqi|tojson }});
+    
+    // Create pollutants chart
+    createPollutantsChart({{ historical.dates|tojson }}, {{ historical.pollutants|tojson }});
+});
 </script>
 {% endif %}
 {% endblock %}
