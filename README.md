@@ -1,4 +1,4 @@
-# Real-Time Environmental Monitoring & Disaster Management System
+# NILAYAN - A Real-Time Environmental Monitoring & Disaster Management System
 
 ## 🌍 Overview
 This project provides real-time monitoring of Air Quality Index (AQI), Water Quality Index (WQI), weather conditions, and disaster management. It utilizes multiple APIs to fetch real-time data, helping users stay informed and take preventive measures during environmental hazards.
@@ -20,17 +20,13 @@ This project provides real-time monitoring of Air Quality Index (AQI), Water Qua
 ## 🔧 Setup & Installation
 1. Clone the repository:
    ```sh
-   git clone https://github.com/your-username/realtime-environment-monitoring.git
+   git clone https://github.com/itz-Mayank/NILAYAN.git
    ```
-2. Navigate to the backend directory:
-   ```sh
-   cd realtime-environment-monitoring/Backend
-   ```
-3. Install dependencies:
+2. Install dependencies:
    ```sh
    pip install -r requirements.txt
    ```
-4. Set up MySQL Database:
+3. Set up MySQL Database:
    ```sql
    CREATE DATABASE environment_db;
    CREATE TABLE aqi_data (
@@ -46,9 +42,9 @@ This project provides real-time monitoring of Air Quality Index (AQI), Water Qua
        timestamp DATETIME
    );
    ```
-5. Run the FastAPI server:
+4. Run the Flask on local server:
    ```sh
-   uvicorn backend:app --reload
+   Flask run
    ```
 
 ## 📡 API Endpoints
